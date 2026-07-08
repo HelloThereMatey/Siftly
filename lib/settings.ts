@@ -4,7 +4,7 @@ import prisma from '@/lib/db'
 let _cachedModel: string | null = null
 let _modelCacheExpiry = 0
 
-let _cachedProvider: 'anthropic' | 'openai' | 'minimax' | null = null
+let _cachedProvider: 'anthropic' | 'openai' | 'minimax' | 'custom' | null = null
 let _providerCacheExpiry = 0
 
 let _cachedOpenAIModel: string | null = null
@@ -12,6 +12,9 @@ let _openAIModelCacheExpiry = 0
 
 let _cachedMiniMaxModel: string | null = null
 let _miniMaxModelCacheExpiry = 0
+
+let _cachedCustomModel: string | null = null
+let _customModelCacheExpiry = 0
 
 const CACHE_TTL = 5 * 60 * 1000
 
@@ -29,11 +32,11 @@ export async function getAnthropicModel(): Promise<string> {
 /**
  * Get the active AI provider (cached for 5 minutes).
  */
-export async function getProvider(): Promise<'anthropic' | 'openai' | 'minimax'> {
+export async function getProvider(): Promise<'anthropic' | 'openai' | 'minimax' | 'custom'> {
   if (_cachedProvider && Date.now() < _providerCacheExpiry) return _cachedProvider
   const setting = await prisma.setting.findUnique({ where: { key: 'aiProvider' } })
   const val = setting?.value
-  _cachedProvider = val === 'openai' ? 'openai' : val === 'minimax' ? 'minimax' : 'anthropic'
+  _cachedProvider = val === 'openai' ? 'openai' : val === 'minimax' ? 'minimax' : val === 'custom' ? 'custom' : 'anthropic'
   _providerCacheExpiry = Date.now() + CACHE_TTL
   return _cachedProvider
 }
@@ -61,12 +64,33 @@ export async function getMiniMaxModel(): Promise<string> {
 }
 
 /**
+ * Get the configured Custom model from settings (cached for 5 minutes).
+ */
+export async function getCustomModel(): Promise<string> {
+  if (_cachedCustomModel && Date.now() < _customModelCacheExpiry) return _cachedCustomModel
+  const setting = await prisma.setting.findUnique({ where: { key: 'customModel' } })
+  _cachedCustomModel = setting?.value ?? 'gpt-4.1-mini'
+  _customModelCacheExpiry = Date.now() + CACHE_TTL
+  return _cachedCustomModel
+}
+
+/**
  * Get the model for the currently active provider.
  */
 export async function getActiveModel(): Promise<string> {
   const provider = await getProvider()
   if (provider === 'minimax') return getMiniMaxModel()
-  return provider === 'openai' ? getOpenAIModel() : getAnthropicModel()
+  return provider === 'openai' ? getOpenAIModel() : provider === 'custom' ? getCustomModel() : getAnthropicModel()
+}
+
+/**
+ * Map a provider to its DB setting key name.
+ */
+export function providerToKeyName(provider: 'anthropic' | 'openai' | 'minimax' | 'custom'): string {
+  if (provider === 'openai') return 'openaiApiKey'
+  if (provider === 'minimax') return 'minimaxApiKey'
+  if (provider === 'custom') return 'customApiKey'
+  return 'anthropicApiKey'
 }
 
 /**
@@ -81,4 +105,6 @@ export function invalidateSettingsCache(): void {
   _openAIModelCacheExpiry = 0
   _cachedMiniMaxModel = null
   _miniMaxModelCacheExpiry = 0
+  _cachedCustomModel = null
+  _customModelCacheExpiry = 0
 }

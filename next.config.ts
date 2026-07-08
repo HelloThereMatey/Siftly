@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  allowedDevOrigins: ['138.25.82.181', '100.115.195.109', 'linux-pc.tail2b9bef.ts.net', 'linux-pc.tail2b9bef.ts.net:3456'],
 }
 
 export default nextConfig

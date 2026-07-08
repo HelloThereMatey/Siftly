@@ -3,6 +3,7 @@ import prisma from '@/lib/db'
 import { resolveAnthropicClient, getCliAuthStatus } from '@/lib/claude-cli-auth'
 import { resolveOpenAIClient } from '@/lib/openai-auth'
 import { resolveMiniMaxClient } from '@/lib/minimax-auth'
+import { resolveCustomClient } from '@/lib/custom-auth'
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   let body: { provider?: string } = {}
@@ -91,6 +92,45 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
       await client.chat.completions.create({
         model: 'MiniMax-M2.7',
+        max_tokens: 5,
+        messages: [{ role: 'user', content: 'hi' }],
+      })
+      return NextResponse.json({ working: true })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      const friendly = msg.includes('401') || msg.includes('invalid_api_key')
+        ? 'Invalid API key'
+        : msg.includes('403')
+        ? 'Key does not have permission'
+        : msg.slice(0, 120)
+      return NextResponse.json({ working: false, error: friendly })
+    }
+  }
+
+  if (provider === 'custom') {
+    const [customApiKeySetting, customBaseUrlSetting, customModelSetting] = await Promise.all([
+      prisma.setting.findUnique({ where: { key: 'customApiKey' } }),
+      prisma.setting.findUnique({ where: { key: 'customBaseUrl' } }),
+      prisma.setting.findUnique({ where: { key: 'customModel' } }),
+    ])
+    const dbKey = customApiKeySetting?.value?.trim()
+    const baseURL = customBaseUrlSetting?.value?.trim()
+    const model = customModelSetting?.value?.trim() ?? 'gpt-4.1-mini'
+
+    if (!baseURL) {
+      return NextResponse.json({ working: false, error: 'No base URL found. Add your base URL in Settings.' })
+    }
+
+    let client
+    try {
+      client = resolveCustomClient({ dbKey, baseURL })
+    } catch {
+      return NextResponse.json({ working: false, error: 'No API key found. Add your key in Settings or set CUSTOM_API_KEY.' })
+    }
+
+    try {
+      await client.chat.completions.create({
+        model,
         max_tokens: 5,
         messages: [{ role: 'user', content: 'hi' }],
       })

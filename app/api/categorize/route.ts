@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 import { AIClient, resolveAIClient } from '@/lib/ai-client'
-import { getActiveModel, getProvider } from '@/lib/settings'
+import { getActiveModel, getProvider, providerToKeyName } from '@/lib/settings'
 import {
   seedDefaultCategories,
   categorizeBatch,
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   if (apiKey && typeof apiKey === 'string' && apiKey.trim() !== '') {
     const currentProvider = await getProvider()
-    const keySlot = currentProvider === 'openai' ? 'openaiApiKey' : 'anthropicApiKey'
+    const keySlot = providerToKeyName(currentProvider)
     await prisma.setting.upsert({
       where: { key: keySlot },
       update: { value: apiKey.trim() },
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   })
 
   const provider = await getProvider()
-  const keyName = provider === 'openai' ? 'openaiApiKey' : 'anthropicApiKey'
+  const keyName = providerToKeyName(provider)
   const dbApiKey =
     (await prisma.setting.findUnique({ where: { key: keyName } }))?.value?.trim() || ''
 

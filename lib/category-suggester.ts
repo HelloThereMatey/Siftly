@@ -141,7 +141,7 @@ async function suggestCategoriesViaCLI(bookmarks: BookmarkSample[]): Promise<Cat
       }
       return parseCategorySuggestions(result.data, bookmarks)
     }
-  } else {
+  } else if (provider === 'anthropic') {
     if (await getCliAvailability()) {
       const model = await getActiveModel()
       const cliModel = modelNameToCliAlias(model)
@@ -247,7 +247,7 @@ export async function generateCategorySuggestions(): Promise<CategorySuggestion[
       if (await getCodexCliAvailability()) {
         return await suggestCategoriesViaCLI(bookmarks)
       }
-    } else {
+    } else if (provider === 'anthropic') {
       if (await getCliAvailability()) {
         return await suggestCategoriesViaCLI(bookmarks)
       }

@@ -255,7 +255,7 @@ export async function categorizeBatch(
         console.warn('[categorize] Codex CLI failed, falling back to SDK:', result.error)
       }
     }
-  } else {
+  } else if (provider === 'anthropic') {
     if (await getCliAvailability()) {
       const model = await getActiveModel()
       const cliModel = modelNameToCliAlias(model)

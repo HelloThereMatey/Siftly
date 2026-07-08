@@ -31,7 +31,7 @@ const ALLOWED_MINIMAX_MODELS = [
 
 export async function GET(): Promise<NextResponse> {
   try {
-    const [anthropic, anthropicModel, provider, openai, openaiModel, minimax, minimaxModel, xClientId, xClientSecret, obsidianVault] = await Promise.all([
+    const [anthropic, anthropicModel, provider, openai, openaiModel, minimax, minimaxModel, customApiKey, customBaseUrl, customModel, xClientId, xClientSecret, obsidianVault] = await Promise.all([
       prisma.setting.findUnique({ where: { key: 'anthropicApiKey' } }),
       prisma.setting.findUnique({ where: { key: 'anthropicModel' } }),
       prisma.setting.findUnique({ where: { key: 'aiProvider' } }),
@@ -39,6 +39,9 @@ export async function GET(): Promise<NextResponse> {
       prisma.setting.findUnique({ where: { key: 'openaiModel' } }),
       prisma.setting.findUnique({ where: { key: 'minimaxApiKey' } }),
       prisma.setting.findUnique({ where: { key: 'minimaxModel' } }),
+      prisma.setting.findUnique({ where: { key: 'customApiKey' } }),
+      prisma.setting.findUnique({ where: { key: 'customBaseUrl' } }),
+      prisma.setting.findUnique({ where: { key: 'customModel' } }),
       prisma.setting.findUnique({ where: { key: 'x_oauth_client_id' } }),
       prisma.setting.findUnique({ where: { key: 'x_oauth_client_secret' } }),
       prisma.setting.findUnique({ where: { key: 'obsidianVaultPath' } }),
@@ -55,6 +58,10 @@ export async function GET(): Promise<NextResponse> {
       minimaxApiKey: maskKey(minimax?.value ?? null),
       hasMinimaxKey: minimax !== null,
       minimaxModel: minimaxModel?.value ?? 'MiniMax-M2.7',
+      customApiKey: maskKey(customApiKey?.value ?? null),
+      hasCustomKey: customApiKey !== null,
+      customBaseUrl: customBaseUrl?.value ?? null,
+      customModel: customModel?.value ?? 'gpt-4.1-mini',
       xOAuthClientId: maskKey(xClientId?.value ?? null),
       xOAuthClientSecret: maskKey(xClientSecret?.value ?? null),
       hasXOAuth: !!xClientId?.value,
@@ -78,6 +85,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     openaiModel?: string
     minimaxApiKey?: string
     minimaxModel?: string
+    customApiKey?: string
+    customBaseUrl?: string
+    customModel?: string
     xOAuthClientId?: string
     xOAuthClientSecret?: string
     obsidianVaultPath?: string
@@ -88,11 +98,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const { anthropicApiKey, anthropicModel, provider, openaiApiKey, openaiModel, minimaxApiKey, minimaxModel } = body
+  const { anthropicApiKey, anthropicModel, provider, openaiApiKey, openaiModel, minimaxApiKey, minimaxModel, customApiKey, customBaseUrl, customModel } = body
 
   // Save provider if provided
   if (provider !== undefined) {
-    if (provider !== 'anthropic' && provider !== 'openai' && provider !== 'minimax') {
+    if (provider !== 'anthropic' && provider !== 'openai' && provider !== 'minimax' && provider !== 'custom') {
       return NextResponse.json({ error: 'Invalid provider' }, { status: 400 })
     }
     await prisma.setting.upsert({
@@ -215,6 +225,75 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // Save Custom API key if provided
+  if (customApiKey !== undefined) {
+    if (typeof customApiKey !== 'string' || customApiKey.trim() === '') {
+      return NextResponse.json({ error: 'Invalid customApiKey value' }, { status: 400 })
+    }
+    const trimmed = customApiKey.trim()
+    try {
+      await prisma.setting.upsert({
+        where: { key: 'customApiKey' },
+        update: { value: trimmed },
+        create: { key: 'customApiKey', value: trimmed },
+      })
+      invalidateSettingsCache()
+      return NextResponse.json({ saved: true })
+    } catch (err) {
+      console.error('Settings POST (custom) error:', err)
+      return NextResponse.json(
+        { error: `Failed to save: ${err instanceof Error ? err.message : String(err)}` },
+        { status: 500 }
+      )
+    }
+  }
+
+  // Save Custom base URL if provided
+  if (customBaseUrl !== undefined) {
+    if (typeof customBaseUrl !== 'string' || customBaseUrl.trim() === '') {
+      return NextResponse.json({ error: 'Invalid customBaseUrl value' }, { status: 400 })
+    }
+    const trimmed = customBaseUrl.trim()
+    try {
+      await prisma.setting.upsert({
+        where: { key: 'customBaseUrl' },
+        update: { value: trimmed },
+        create: { key: 'customBaseUrl', value: trimmed },
+      })
+      invalidateSettingsCache()
+      return NextResponse.json({ saved: true })
+    } catch (err) {
+      console.error('Settings POST (custom baseUrl) error:', err)
+      return NextResponse.json(
+        { error: `Failed to save: ${err instanceof Error ? err.message : String(err)}` },
+        { status: 500 }
+      )
+    }
+  }
+
+  // Save Custom model if provided
+  if (customModel !== undefined) {
+    if (typeof customModel !== 'string' || customModel.trim() === '') {
+      return NextResponse.json({ error: 'Invalid customModel value' }, { status: 400 })
+    }
+    const trimmed = customModel.trim()
+    try {
+      await prisma.setting.upsert({
+        where: { key: 'customModel' },
+        update: { value: trimmed },
+        create: { key: 'customModel', value: trimmed },
+      })
+      invalidateSettingsCache()
+      return NextResponse.json({ saved: true })
+    } catch (err) {
+      console.error('Settings POST (custom model) error:', err)
+      return NextResponse.json(
+        { error: `Failed to save: ${err instanceof Error ? err.message : String(err)}` },
+        { status: 500 }
+      )
+    }
+  }
+
   // Save Obsidian vault path if provided
   if (body.obsidianVaultPath !== undefined) {
     const trimmed = body.obsidianVaultPath.trim()
@@ -272,7 +351,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const allowed = ['anthropicApiKey', 'openaiApiKey', 'minimaxApiKey', 'x_oauth_client_id', 'x_oauth_client_secret']
+  const allowed = ['anthropicApiKey', 'openaiApiKey', 'minimaxApiKey', 'customApiKey', 'x_oauth_client_id', 'x_oauth_client_secret']
   if (!body.key || !allowed.includes(body.key)) {
     return NextResponse.json({ error: 'Invalid key' }, { status: 400 })
   }

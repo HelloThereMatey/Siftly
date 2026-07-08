@@ -88,7 +88,7 @@ async function analyzeImageViaCli(imageUrl: string): Promise<string> {
     const jsonMatch = result.data.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return ''
     try { JSON.parse(jsonMatch[0]); return jsonMatch[0] } catch { return '' }
-  } else {
+  } else if (provider === 'anthropic') {
     if (!(await getCliAvailability())) return ''
     const model = await getActiveModel()
     const cliModel = modelNameToCliAlias(model)
@@ -98,6 +98,8 @@ async function analyzeImageViaCli(imageUrl: string): Promise<string> {
     if (!jsonMatch) return ''
     try { JSON.parse(jsonMatch[0]); return jsonMatch[0] } catch { return '' }
   }
+
+  return ''
 }
 
 async function analyzeImageWithRetry(
@@ -404,7 +406,7 @@ export async function enrichBatchSemanticTags(
         catch { console.warn('[enrich] Codex CLI response parse failed, falling back to SDK') }
       }
     }
-  } else {
+  } else if (provider === 'anthropic') {
     if (await getCliAvailability()) {
       const model = await getActiveModel()
       const cliModel = modelNameToCliAlias(model)

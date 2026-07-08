@@ -117,7 +117,7 @@ function ApiKeyField({
 }: {
   label: string
   placeholder: string
-  fieldKey: 'anthropicApiKey' | 'openaiApiKey' | 'minimaxApiKey'
+  fieldKey: 'anthropicApiKey' | 'openaiApiKey' | 'minimaxApiKey' | 'customApiKey'
   hint: string
   docHref: string
   onToast: (t: Toast) => void
@@ -136,7 +136,7 @@ function ApiKeyField({
     fetch('/api/settings')
       .then((r) => r.json())
       .then((d: Record<string, unknown>) => {
-        const hasKeyField = fieldKey === 'openaiApiKey' ? 'hasOpenaiKey' : fieldKey === 'minimaxApiKey' ? 'hasMinimaxKey' : 'hasAnthropicKey'
+        const hasKeyField = fieldKey === 'openaiApiKey' ? 'hasOpenaiKey' : fieldKey === 'minimaxApiKey' ? 'hasMinimaxKey' : fieldKey === 'customApiKey' ? 'hasCustomKey' : 'hasAnthropicKey'
         const hasKey = d[hasKeyField]
         const masked = d[fieldKey] as string | null
         if (hasKey && masked) setSavedMasked(masked)
@@ -525,7 +525,7 @@ function CodexCliStatusBox() {
   )
 }
 
-function ProviderToggle({ value, onChange }: { value: 'anthropic' | 'openai' | 'minimax'; onChange: (v: 'anthropic' | 'openai' | 'minimax') => void }) {
+function ProviderToggle({ value, onChange }: { value: 'anthropic' | 'openai' | 'minimax' | 'custom'; onChange: (v: 'anthropic' | 'openai' | 'minimax' | 'custom') => void }) {
   return (
     <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-800 border border-zinc-700 mb-5">
       <button
@@ -558,26 +558,36 @@ function ProviderToggle({ value, onChange }: { value: 'anthropic' | 'openai' | '
       >
         MiniMax
       </button>
+      <button
+        onClick={() => onChange('custom')}
+        className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          value === 'custom'
+            ? 'bg-sky-600 text-white shadow-sm'
+            : 'text-zinc-400 hover:text-zinc-200'
+        }`}
+      >
+        Custom
+      </button>
     </div>
   )
 }
 
 function ApiKeySection({ onToast }: { onToast: (t: Toast) => void }) {
-  const [provider, setProvider] = useState<'anthropic' | 'openai' | 'minimax' | null>(null)
+  const [provider, setProvider] = useState<'anthropic' | 'openai' | 'minimax' | 'custom' | null>(null)
 
   useEffect(() => {
     fetch('/api/settings')
       .then((r) => r.json())
       .then((d: { provider?: string }) => {
-        setProvider(d.provider === 'openai' ? 'openai' : d.provider === 'minimax' ? 'minimax' : 'anthropic')
+        setProvider(d.provider === 'openai' ? 'openai' : d.provider === 'minimax' ? 'minimax' : d.provider === 'custom' ? 'custom' : 'anthropic')
       })
       .catch(() => setProvider('anthropic'))
   }, [])
 
-  async function handleProviderChange(newProvider: 'anthropic' | 'openai' | 'minimax') {
+  async function handleProviderChange(newProvider: 'anthropic' | 'openai' | 'minimax' | 'custom') {
     const prev = provider
     setProvider(newProvider)
-    const labels: Record<string, string> = { anthropic: 'Anthropic', openai: 'OpenAI', minimax: 'MiniMax' }
+    const labels: Record<string, string> = { anthropic: 'Anthropic', openai: 'OpenAI', minimax: 'MiniMax', custom: 'Custom' }
     try {
       const res = await fetch('/api/settings', {
         method: 'POST',
@@ -661,6 +671,122 @@ function ApiKeySection({ onToast }: { onToast: (t: Toast) => void }) {
               />
               <p className="text-xs text-zinc-500 mt-1.5">Applies to all AI operations — API key <strong className="text-zinc-400 font-medium">and Codex CLI</strong></p>
             </div>
+          </div>
+        </>
+      ) : provider === 'custom' ? (
+        <>
+          <div className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-1.5">Base URL</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="https://api.z.ai/api/coding/paas/v4"
+                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-200 placeholder:text-zinc-600 text-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 font-mono"
+                  id="customBaseUrl"
+                />
+                <button
+                  onClick={() => {
+                    const baseUrl = (document.getElementById('customBaseUrl') as HTMLInputElement)?.value?.trim()
+                    if (baseUrl) {
+                      fetch('/api/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ customBaseUrl: baseUrl.trim() }),
+                      }).then(() => onToast({ type: 'success', message: 'Base URL saved' }))
+                    }
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium transition-colors shrink-0"
+                >
+                  Save
+                </button>
+              </div>
+              <p className="text-xs text-zinc-600 mt-1.5">OpenAI-compatible endpoint (e.g. z.ai, NVIDIA NIM, OpenAI)</p>
+            </div>
+
+            <div>
+              <ApiKeyField
+                label="API Key"
+                placeholder="nvapi-... or z.ai key..."
+                fieldKey="customApiKey"
+                hint="Used for AI categorization, search, and image analysis."
+                docHref="https://build.nvidia.com/"
+                onToast={onToast}
+                testProvider="custom"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-1.5">Model</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="glm-4.6 or meta/llama-3.3-70b-instruct"
+                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-200 placeholder:text-zinc-600 text-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 font-mono"
+                  id="customModel"
+                />
+                <button
+                  onClick={() => {
+                    const model = (document.getElementById('customModel') as HTMLInputElement)?.value?.trim()
+                    if (model) {
+                      fetch('/api/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ customModel: model.trim() }),
+                      }).then(() => onToast({ type: 'success', message: 'Model saved' }))
+                    }
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium transition-colors shrink-0"
+                >
+                  Save
+                </button>
+              </div>
+              <p className="text-xs text-zinc-600 mt-1.5">Free text — enter any model name your endpoint supports</p>
+            </div>
+
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-xs text-zinc-500">Quick-fill:</span>
+              <button
+                onClick={() => {
+                  const baseUrl = 'https://api.z.ai/api/coding/paas/v4'
+                  const model = 'glm-4.6'
+                  fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customBaseUrl: baseUrl, customModel: model }),
+                  }).then(() => {
+                    ;(document.getElementById('customBaseUrl') as HTMLInputElement).value = baseUrl
+                    ;(document.getElementById('customModel') as HTMLInputElement).value = model
+                  })
+                  onToast({ type: 'success', message: 'z.ai preset applied' })
+                }}
+                className="text-xs text-sky-500 hover:text-sky-400 transition-colors underline"
+              >
+                z.ai (GLM)
+              </button>
+              <button
+                onClick={() => {
+                  const baseUrl = 'https://integrate.api.nvidia.com/v1'
+                  const model = 'meta/llama-3.3-70b-instruct'
+                  fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customBaseUrl: baseUrl, customModel: model }),
+                  }).then(() => {
+                    ;(document.getElementById('customBaseUrl') as HTMLInputElement).value = baseUrl
+                    ;(document.getElementById('customModel') as HTMLInputElement).value = model
+                  })
+                  onToast({ type: 'success', message: 'NVIDIA NIM preset applied' })
+                }}
+                className="text-xs text-sky-500 hover:text-sky-400 transition-colors underline"
+              >
+                NVIDIA NIM (free)
+              </button>
+            </div>
+
+            <p className="text-xs text-amber-500/80 mt-2">
+              <strong>Vision:</strong> Choose a multimodal model (e.g. z.ai GLM-4.6). Text-only models like NIM Llama will fail image analysis.
+            </p>
           </div>
         </>
       ) : (

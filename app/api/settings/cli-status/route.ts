@@ -15,6 +15,8 @@ export async function GET(): Promise<NextResponse> {
     ? 'openai'
     : providerSetting?.value === 'minimax'
     ? 'minimax'
+    : providerSetting?.value === 'custom'
+    ? 'custom'
     : 'anthropic'
 
   // Only check CLI subprocess availability if OAuth credentials exist

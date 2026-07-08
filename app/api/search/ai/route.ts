@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 import { ftsSearch } from '@/lib/fts'
 import { AIClient, resolveAIClient } from '@/lib/ai-client'
-import { getActiveModel, getProvider } from '@/lib/settings'
+import { getActiveModel, getProvider, providerToKeyName } from '@/lib/settings'
 import { extractKeywords } from '@/lib/search-utils'
 import { getCliAvailability, claudePrompt, modelNameToCliAlias } from '@/lib/claude-cli-auth'
 import { getCodexCliAvailability, codexPrompt } from '@/lib/codex-cli'
@@ -32,7 +32,7 @@ let _categoriesCacheExpiry = 0
 async function getDbApiKey(): Promise<string> {
   if (_apiKey !== null && Date.now() < _apiKeyExpiry) return _apiKey
   const provider = await getProvider()
-  const keyName = provider === 'openai' ? 'openaiApiKey' : 'anthropicApiKey'
+  const keyName = providerToKeyName(provider)
   const setting = await prisma.setting.findUnique({ where: { key: keyName } })
   const fromDb = setting?.value?.trim() ?? ''
   _apiKey = fromDb

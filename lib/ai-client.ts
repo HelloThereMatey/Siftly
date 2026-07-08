@@ -3,7 +3,9 @@ import OpenAI from 'openai'
 import { resolveAnthropicClient } from './claude-cli-auth'
 import { resolveOpenAIClient } from './openai-auth'
 import { resolveMiniMaxClient } from './minimax-auth'
+import { resolveCustomClient } from './custom-auth'
 import { getProvider } from './settings'
+import prisma from '@/lib/db'
 
 export interface AIContentBlock {
   type: 'text' | 'image'
@@ -150,6 +152,18 @@ export async function resolveAIClient(options: {
 
   if (provider === 'openai') {
     const client = resolveOpenAIClient(options)
+    return new OpenAIAIClient(client)
+  }
+
+  if (provider === 'custom') {
+    const [customApiKeySetting, customBaseUrlSetting] = await Promise.all([
+      prisma.setting.findUnique({ where: { key: 'customApiKey' } }),
+      prisma.setting.findUnique({ where: { key: 'customBaseUrl' } }),
+    ])
+    const client = resolveCustomClient({
+      dbKey: customApiKeySetting?.value ?? undefined,
+      baseURL: customBaseUrlSetting?.value ?? undefined,
+    })
     return new OpenAIAIClient(client)
   }
 
