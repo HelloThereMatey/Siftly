@@ -82,6 +82,51 @@ OpenCode Go ($5 first month → $10/month) provides curated coding models (GLM-5
 - Check that OpenCode Go credentials are valid in `~/.config/routatic-proxy/config.json` — the proxy needs them to connect.
 - See [routatic/proxy](https://github.com/routatic/proxy) for full config options and troubleshooting.
 
+### Routing vision to a different model than text
+
+Siftly sends the **same** model name (your configured Anthropic model) for every AI call — vision, enrichment, categorization, and search. routatic-proxy can still split these: it auto-detects requests that contain an image and routes them to a dedicated **vision** scenario, leaving text on the `default` scenario. So you can run a multimodal model for images (e.g. `minimax-m3`) and a strong text model for everything else (e.g. `deepseek-v4-pro`). No Siftly code changes are needed — the image request Siftly already sends (a non-streaming Anthropic message with a `{type:"image", source:{base64}}` block) is exactly what the proxy's vision path expects.
+
+**1. Configure all three vision scenarios.** The proxy distinguishes `vision`, `vision_complex` (image + reasoning keywords), and `vision_long_context` (image + high token count). Siftly's `ANALYSIS_PROMPT` starts with *"Analyze…"* — and `analyze` is a reasoning keyword — so image requests classify as **`vision_complex`**, not `vision`. Configure all three, or image requests error with `vision scenario vision_complex is not configured`:
+
+```json
+"models": {
+  "default":              { "provider": "opencode-go", "model_id": "deepseek-v4-pro", "max_tokens": 8192 },
+  "vision":               { "provider": "opencode-go", "model_id": "minimax-m3", "vision": true, "temperature": 0.3, "max_tokens": 2048 },
+  "vision_complex":       { "provider": "opencode-go", "model_id": "minimax-m3", "vision": true, "temperature": 0.3, "max_tokens": 2048 },
+  "vision_long_context":  { "provider": "opencode-go", "model_id": "minimax-m3", "vision": true, "temperature": 0.3, "max_tokens": 4096, "context_threshold": 80000 }
+},
+"fallbacks": {
+  "vision":               [{ "provider": "opencode-go", "model_id": "qwen3.7-max" }, { "provider": "opencode-go", "model_id": "kimi-k2.7-code" }],
+  "vision_complex":       [{ "provider": "opencode-go", "model_id": "qwen3.7-max" }, { "provider": "opencode-go", "model_id": "kimi-k2.7-code" }],
+  "vision_long_context":  [{ "provider": "opencode-go", "model_id": "qwen3.7-max" }, { "provider": "opencode-go", "model_id": "kimi-k2.7-code" }]
+}
+```
+
+**2. Force `vision: true` if the proxy under-detects your model.** The proxy ships a built-in capability registry, and it marks some genuinely-multimodal models as non-vision — **`minimax-m3` is `Vision: false` in the registry** even though it natively accepts images. Without `"vision": true"`, the capacity filter skips it for image requests (log line: `model skipped by capacity filter ... reason=vision_not_supported`). An explicit `vision: true` overrides the registry. If your chosen model truly can't accept images, the proxy will still route to it but the upstream will error — pick a registry-confirmed multimodal model (`qwen3.7-max`, `kimi-k2.7-code`, `mimo-v2-omni`) instead.
+
+**3. Put the OpenCode key in the provider blocks, not the top level.** The proxy reads upstream credentials **only** from `opencode_go.api_key` / `opencode_zen.api_key` — the top-level `api_key` is used for startup validation and inbound client auth, not for talking to OpenCode. An empty provider key produces `API error 401: AuthError "Invalid API key"` on **every** request (vision and text). Also, `"${VAR}"` is env-var interpolation, so a literal key must **not** be wrapped in `${}` (that resolves to empty):
+
+```json
+"opencode_go":  { "base_url": "https://opencode.ai/zen/go/v1/chat/completions", "api_key": "sk-...", "timeout_ms": 300000 },
+"opencode_zen": { "base_url": "https://opencode.ai/zen/v1/chat/completions",    "api_key": "sk-...", "timeout_ms": 300000 }
+```
+
+**4. Don't let a `model_overrides` entry hijack Siftly's traffic.** Overrides take precedence over scenario routing. If your Siftly Anthropic model name (e.g. `claude-opus-4-6`) appears as a `model_overrides` key, **all** of Siftly's requests — vision and text — get pinned to that one chain and the vision/text split is bypassed (log shows `scenario=override` instead of `scenario=vision_complex`). Remove that override entry, or set Siftly's model to a name that isn't overridden, so requests fall through to scenario routing. (Keep `respect_requested_model: false` so the requested name is used only for override matching, not as the upstream model.)
+
+**Verify.** After restarting the proxy (`systemctl restart routatic-proxy`, or `routatic-proxy serve`), tail the logs while running a categorize and confirm image requests route to your vision model:
+
+```bash
+journalctl -u routatic-proxy -f | grep -E 'routing request|attempting model'
+# expect: scenario=vision_complex model=minimax-m3 ... attempting model model=minimax-m3 attempt=1
+```
+
+If vision had previously run against a text-only model, the failed analyses are cached — clear them and re-run with `force` (see [llm-pipeline-investigation.md](llm-pipeline-investigation.md) for the full diagnosis):
+
+```bash
+sqlite3 prisma/dev.db "UPDATE MediaItem SET imageTags = NULL WHERE type IN ('photo','gif','video') AND (imageTags = '{}' OR imageTags LIKE '%error%');"
+curl -sX POST http://localhost:3000/api/categorize -H 'Content-Type: application/json' -d '{"force":true}'
+```
+
 ---
 
 ## Quick Tips

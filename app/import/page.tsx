@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Upload, CheckCircle, ChevronRight, Loader2, Copy, Check, ExternalLink, Sparkles, Eye, Tag, Brain, Layers, StopCircle, RefreshCw, Clock, KeyRound, Trash2, AlertCircle, User, LogOut } from 'lucide-react'
 import * as Progress from '@radix-ui/react-progress'
 
-type Step = 1 | 2 | 3
+type Step = 1 | 2
 type Method = 'bookmarklet' | 'console' | 'live'
 
 interface ImportResult {
@@ -379,7 +379,7 @@ function DraggableBookmarklet() {
 // ── Components ────────────────────────────────────────────────────────────────
 
 function StepIndicator({ current }: { current: Step }) {
-  const steps = ['Upload', 'Importing', 'Categorize']
+  const steps = ['Upload', 'Importing']
   return (
     <div className="flex items-center gap-2 mb-8">
       {steps.map((label, i) => {
@@ -913,8 +913,9 @@ function InstructionsStep({ onFile, importSource, onLiveSynced }: { onFile: (fil
   )
 }
 
-function ImportingStep({ result }: {
+function ImportingStep({ result, onCategorize }: {
   result: ImportResult | null
+  onCategorize: () => void
 }) {
   if (!result) {
     return (
@@ -938,15 +939,29 @@ function ImportingStep({ result }: {
           <span className="text-zinc-500">{result.skipped} skipped</span> as duplicates
         </p>
       </div>
-      <div className="flex items-center gap-2 text-indigo-400 text-sm">
-        <Loader2 size={14} className="animate-spin" />
-        Starting AI categorization…
+      <div className="flex items-center gap-3">
+        <Link
+          href="/bookmarks"
+          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-medium transition-colors border border-zinc-700"
+        >
+          View bookmarks
+          <ChevronRight size={16} />
+        </Link>
+        {result.imported > 0 && (
+          <button
+            onClick={onCategorize}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors"
+          >
+            <Sparkles size={16} />
+            Categorize imported bookmarks
+          </button>
+        )}
       </div>
     </div>
   )
 }
 
-function CategorizeStep({ importedCount, force = false }: { importedCount: number; force?: boolean }) {
+function CategorizeStep({ importedCount, force = false, autoStart = false }: { importedCount: number; force?: boolean; autoStart?: boolean }) {
   const [status, setStatus] = useState<CategorizeStatus | null>(null)
   const [running, setRunning] = useState(false)
   const [stopping, setStopping] = useState(false)
@@ -961,7 +976,7 @@ function CategorizeStep({ importedCount, force = false }: { importedCount: numbe
     }
   }, [])
 
-  // On mount: attach to running pipeline, or start one if new bookmarks were imported.
+  // On mount: attach to running pipeline, or start one if autoStart is true.
   // importedCount: -1 = direct trigger (not from import), 0 = all skipped, >0 = new bookmarks
   useEffect(() => {
     // All skipped — nothing to categorize
@@ -977,12 +992,14 @@ function CategorizeStep({ importedCount, force = false }: { importedCount: numbe
           setRunning(true)
           setStopping(data.status === 'stopping')
           pollStatus()
-        } else {
-          // Start a fresh pipeline for the newly imported bookmarks
+        } else if (autoStart) {
+          // Start a fresh pipeline for the newly imported bookmarks (only if autoStart is true)
           void startCategorization(force)
         }
       } catch {
-        void startCategorization(force)
+        if (autoStart) {
+          void startCategorization(force)
+        }
       }
     })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1276,13 +1293,16 @@ export default function ImportPage() {
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState('')
   const [forceReprocess, setForceReprocess] = useState(false)
+  const [showCategorize, setShowCategorize] = useState(false)
 
-  // Auto-resume to step 3 if the pipeline is already running (e.g. user navigated away and back)
+  // Auto-show categorization section if the pipeline is already running (e.g. user navigated away and back)
   useEffect(() => {
     fetch('/api/categorize')
       .then((r) => r.json())
       .then((d: { status: string }) => {
-        if (d.status === 'running' || d.status === 'stopping') setStep(3)
+        if (d.status === 'running' || d.status === 'stopping') {
+          setShowCategorize(true)
+        }
       })
       .catch(() => {})
   }, [])
@@ -1290,13 +1310,18 @@ export default function ImportPage() {
   function handleLiveSynced(result: ImportResult) {
     setImportResult(result)
     setStep(2)
-    setTimeout(() => setStep(3), 1500)
+    // No auto-advance to categorization anymore
+  }
+
+  function handleCategorize() {
+    setShowCategorize(true)
   }
 
   async function handleFile(file: File) {
     setStep(2)
     setImporting(true)
     setImportError('')
+    setShowCategorize(false)
 
     try {
       const formData = new FormData()
@@ -1324,8 +1349,7 @@ export default function ImportPage() {
         throw new Error('Could not parse any bookmarks from this file. Make sure you\'re uploading a Twitter/X bookmarks JSON export.')
       }
 
-      // Auto-advance to categorization after a brief moment to show the result
-      setTimeout(() => setStep(3), 1500)
+      // No auto-advance to categorization anymore
     } catch (err) {
       console.error('Import error:', err)
       setImportError(err instanceof Error ? err.message : 'Import failed')
@@ -1342,7 +1366,7 @@ export default function ImportPage() {
         <p className="text-zinc-400 mt-1">Export your X/Twitter bookmarks as JSON, then upload below.</p>
       </div>
 
-      {step === 1 && <UncategorizedBanner onCategorize={() => setStep(3)} onReprocess={() => { setForceReprocess(true); setStep(3) }} />}
+      {step === 1 && <UncategorizedBanner onCategorize={handleCategorize} onReprocess={() => { setForceReprocess(true); handleCategorize() }} />}
 
       {importError && (
         <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4">
@@ -1357,10 +1381,20 @@ export default function ImportPage() {
         {step === 2 && (
           <ImportingStep
             result={importing ? null : importResult}
+            onCategorize={handleCategorize}
           />
         )}
-        {step === 3 && <CategorizeStep importedCount={importResult ? importResult.imported : -1} force={forceReprocess} />}
       </div>
+
+      {showCategorize && (
+        <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-zinc-100">AI Categorization</h2>
+            <p className="text-zinc-400 mt-1">Analyze images, extract entities, and categorize your bookmarks.</p>
+          </div>
+          <CategorizeStep importedCount={importResult ? importResult.imported : -1} force={forceReprocess} autoStart={true} />
+        </div>
+      )}
     </div>
   )
 }
