@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brodie & James 40th</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&family=Permanent+Marker&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --maroon:#800020;
+      --cyan:#00f0ff;
+      --gold:#ffd700;
+      --dark:#0a0a0a;
+      --card:#121212;
+      --muted:rgba(255,255,255,0.55);
+    }
+    body { font-family:'Inter',system-ui,sans-serif; background:var(--dark); color:#fff; line-height:1.4; }
+    .container { max-width:1200px; margin:0 auto; }
+
+    /* HERO — compact */
+    .hero {
+      min-height:75vh; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;
+      padding:30px 20px; background:radial-gradient(ellipse at center, #1a0520 0%, #0a0a0a 70%);
+      position:relative; overflow:hidden;
+    }
+    .hero::before { content:''; position:absolute; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.12) 2px,rgba(0,0,0,0.12) 4px); pointer-events:none; z-index:2; }
+    .hero-badge { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:0.3em; color:var(--cyan); border:1px solid var(--cyan); padding:6px 20px; margin-bottom:20px; text-transform:uppercase; position:relative; z-index:3; }
+    .hero-names { font-family:'Bebas Neue',sans-serif; font-size:clamp(50px,12vw,130px); line-height:0.9; letter-spacing:-0.02em; color:#fff; position:relative; z-index:3; animation:thud 1s ease forwards; }
+    .hero-names .and { display:block; font-size:0.4em; color:var(--maroon); letter-spacing:0.1em; margin:-5px 0; }
+    .hero-sub { font-size:clamp(18px,3.5vw,30px); font-weight:800; letter-spacing:0.08em; color:var(--gold); margin:10px 0 8px; position:relative; z-index:3; }
+    .hero-location { font-size:13px; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); margin-bottom:15px; position:relative; z-index:3; }
+    .hero-tagline { font-family:'Permanent Marker',cursive; font-size:clamp(15px,2.5vw,22px); color:var(--maroon); margin-bottom:25px; position:relative; z-index:3; transform:rotate(-2deg); max-width:600px; }
+    .hero-btn { display:inline-flex; flex-direction:column; align-items:center; gap:4px; padding:12px 30px; background:var(--gold); color:#0a0a0a; text-decoration:none; font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:0.1em; text-transform:uppercase; position:relative; z-index:3; clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%); transition:all 0.3s ease; }
+    .hero-btn small { font-family:'Inter',sans-serif; font-size:10px; font-weight:400; letter-spacing:0.02em; text-transform:none; color:rgba(0,0,0,0.6); max-width:260px; line-height:1.3; }
+    .hero-btn:hover { background:#fff; transform:scale(1.04); box-shadow:0 0 30px rgba(255,215,0,0.4); }
+
+    /* TWO-COLUMN STRIP */
+    .strip { display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:40px 20px; background:#050505; max-width:1100px; margin:0 auto; }
+    .strip-card { background:var(--card); border:1px solid rgba(255,255,255,0.06); padding:30px; }
+    .strip-card h3 { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:0.06em; color:var(--cyan); margin-bottom:10px; }
+    .strip-card p { font-size:14px; color:var(--muted); line-height:1.5; }
+    .strip-card .icons { font-size:36px; margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap; }
+
+    /* JAM CIRCLE HERO IMAGE */
+    .jam-hero { padding:0 20px 20px; background:#050505; max-width:1100px; margin:0 auto; }
+    .jam-hero img { width:100%; max-height:420px; object-fit:cover; display:block; }
+
+    /* SCHEDULE — compact */
+    .schedule-section { padding:50px 20px; background:#080808; }
+    .schedule-note { text-align:center; font-size:11px; color:rgba(255,255,255,0.35); margin-bottom:30px; font-style:italic; letter-spacing:0.02em; }
+    .schedule-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:15px; max-width:1100px; margin:0 auto; }
+    .day-card { background:var(--card); border:1px solid rgba(255,255,255,0.06); padding:22px 18px; position:relative; }
+    .day-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--maroon); }
+    .day-header { font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:0.06em; color:var(--gold); margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .day-events { list-style:none; }
+    .day-events li { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.03); font-size:12px; }
+    .day-events li:last-child { border-bottom:none; }
+    .time { font-weight:700; color:var(--cyan); min-width:40px; font-size:11px; letter-spacing:0.05em; }
+    .event { color:#ddd; flex:1; min-width:120px; font-size:12px; }
+    .dur { font-size:10px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); white-space:nowrap; }
+
+    /* PSYCHEDELIC IMAGE ROW */
+    .psych-row { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:20px; max-width:1100px; margin:0 auto; }
+    .psych-row .p-img { aspect-ratio:3/2; overflow:hidden; }
+    .psych-row .p-img img { width:100%; height:100%; object-fit:cover; filter:contrast(1.1) saturate(0.8); transition:all 0.4s; }
+    .psych-row .p-img:hover img { filter:contrast(1.3) saturate(1.1); transform:scale(1.04); }
+
+    /* SECTION LABEL */
+    .sec-label { font-family:'Bebas Neue',sans-serif; font-size:clamp(22px,4vw,38px); letter-spacing:0.06em; text-align:center; padding:30px 20px 0; }
+    .sec-label span { color:var(--maroon); }
+    .sec-sub { text-align:center; color:var(--muted); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; padding:0 20px 25px; }
+
+    /* VENUE PHOTOS — compact */
+    .venue-photo-row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:20px; max-width:1100px; margin:0 auto; }
+    .venue-photo-row .vp { aspect-ratio:4/3; overflow:hidden; }
+    .venue-photo-row .vp img { width:100%; height:100%; object-fit:cover; filter:brightness(0.85); transition:all 0.4s; }
+    .venue-photo-row .vp:hover img { filter:brightness(1.05); transform:scale(1.03); }
+
+    /* VENUE CARD — compact */
+    .venue-card { max-width:750px; margin:30px auto; padding:30px; background:var(--card); border:1px solid rgba(255,255,255,0.08); text-align:center; }
+    .venue-card h3 { font-family:'Bebas Neue',sans-serif; font-size:30px; letter-spacing:0.06em; color:var(--gold); margin-bottom:12px; }
+    .venue-card .desc { font-size:14px; color:rgba(255,255,255,0.6); line-height:1.6; margin-bottom:20px; }
+    .venue-tags { display:flex; flex-wrap:wrap; justify-content:center; gap:6px; }
+    .venue-tags span { padding:5px 12px; font-size:10px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; border:1px solid rgba(128,0,32,0.4); color:var(--maroon); background:rgba(128,0,32,0.05); }
+    .venue-btn { display:inline-block; margin-top:25px; padding:10px 28px; font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:0.08em; color:#0a0a0a; background:var(--cyan); text-decoration:none; text-transform:uppercase; transition:all 0.3s; }
+    .venue-btn:hover { background:#fff; box-shadow:0 0 30px rgba(0,240,255,0.3); }
+
+    /* FOOTER */
+    .footer { padding:40px 20px; text-align:center; background:#000; border-top:1px solid rgba(128,0,32,0.15); }
+    .footer-text { font-family:'Permanent Marker',cursive; font-size:18px; color:var(--maroon); opacity:0.8; line-height:1.6; }
+
+    @keyframes thud {
+      0%{opacity:0;transform:scale(1.4);filter:blur(8px)}
+      60%{opacity:1;transform:scale(0.96);filter:blur(0)}
+      100%{opacity:1;transform:scale(1)}
+    }
+
+    @media(max-width:768px){
+      .strip{grid-template-columns:1fr}
+      .schedule-grid{grid-template-columns:1fr}
+      .psych-row{grid-template-columns:repeat(2,1fr)}
+      .venue-photo-row{grid-template-columns:repeat(2,1fr)}
+      .venue-card{padding:20px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- HERO — compact -->
+<section class="hero">
+  <div class="hero-badge">You're Invited</div>
+  <h1 class="hero-names">Brodie<span class="and">&amp;</span>James</h1>
+  <div class="hero-sub">XL · 40TH BIRTHDAY</div>
+  <div class="hero-location">Spencer — Hawkesbury River — NSW</div>
+  <div class="hero-tagline">3 days of revelry, stimulating discussion &amp; mind expansion<br>— on the thin pretext of entering middle age.</div>
+  <a href="#venue" class="hero-btn">The Setup<small>(not yet booked — could upgrade location if enough people are keen)</small></a>
+</section>
+
+<!-- THREE CARDS — compact row -->
+<section class="strip">
+  <div class="strip-card">
+    <div class="icons">💨💎🍄🍺🍸🥃</div>
+    <h3>Altered States</h3>
+    <p>Smoke, crystals, libations, and expanded consciousness. This is a space for exploration — plant medicines, breathwork, fine spirits, and deep inner journeying under the Hawkesbury stars.</p>
+  </div>
+  <div class="strip-card">
+    <div class="icons">🎸🥁🎻</div>
+    <h3>Jams &amp; Vibes</h3>
+    <p>Guitars, djembes, fiddles, banjos. Grab an instrument or just sing your lungs out. The campfire jam circle is the heartbeat of the weekend — everyone contributes, no spectators.</p>
+  </div>
+</section>
+<section class="strip" style="padding-top:0;">
+  <div class="strip-card" style="grid-column:1/-1;">
+    <div class="icons">🥩🔥🍖</div>
+    <h3>Feast Mode</h3>
+    <p>Double BBQ, commercial kitchen, 1000L drinks fridge. We're talking serious cuts over open flame, banquet tables groaning under the weight of it, and carnivorous abandon. Bring your appetite — leave your vegetarianism at the gate.</p>
+  </div>
+</section>
+
+<!-- JAM CIRCLE HERO IMAGE -->
+<section class="jam-hero">
+  <img src="jam-circle.jpg" alt="Jam circle around campfire" loading="lazy">
+</section>
+
+<!-- PSYCHEDELIC IMAGE ROW -->
+<section>
+  <div class="sec-label">Expand <span>Your</span> Mind</div>
+  <div class="sec-sub">What lies beyond the veil. Come find out.</div>
+  <div class="psych-row">
+    <div class="p-img"><img src="https://images.unsplash.com/photo-1621974639426-4cbecbd347eb?w=600&q=80" alt="Psychedelic lights"></div>
+    <div class="p-img"><img src="https://images.unsplash.com/photo-1573511860302-28c524319d2a?w=600&q=80" alt="Neon consciousness"></div>
+    <div class="p-img"><img src="https://images.unsplash.com/photo-1558043279-a860bfe6d3b5?w=600&q=80" alt="Blacklit psychedelic graffiti"></div>
+    <div class="p-img"><img src="https://images.unsplash.com/photo-1614519679773-4ea6ddf17420?w=600&q=80" alt="Abstract psychedelic"></div>
+  </div>
+</section>
+
+<!-- SCHEDULE -->
+<section class="schedule-section">
+  <div class="sec-label" style="padding-top:0;">Three <span>Days</span> of Liberation</div>
+  <div class="sec-sub">Friday – Sunday · Loose itinerary · Follow your frequency</div>
+  <div class="schedule-note">⚠️ Schedule below is mostly Hermes-generated placeholders — real events TBA. Wizard Walk is locked in.</div>
+  <div class="schedule-grid">
+    <div class="day-card">
+      <div class="day-header">Friday</div>
+      <ul class="day-events">
+        <li><span class="time">14:00</span><span class="event">Arrivals &amp; Settle In</span><span class="dur">—</span></li>
+        <li><span class="time">16:00</span><span class="event">Welcome Circle &amp; Intention Setting</span><span class="dur">1hr</span></li>
+        <li><span class="time">18:00</span><span class="event">Sunset River Ritual</span><span class="dur">1.5hr</span></li>
+        <li><span class="time">20:00</span><span class="event">Feast &amp; Fire Pit Opens</span><span class="dur">ongoing</span></li>
+        <li><span class="time">22:00</span><span class="event">Deep Listening Session</span><span class="dur">late</span></li>
+      </ul>
+    </div>
+    <div class="day-card">
+      <div class="day-header">Saturday</div>
+      <ul class="day-events">
+        <li><span class="time">09:00</span><span class="event">Wizard Walk</span><span class="dur">6hr</span></li>
+        <li><span class="time">15:00</span><span class="event">Return &amp; River Swim Recovery</span><span class="dur">2hr</span></li>
+        <li><span class="time">18:00</span><span class="event">BBQ Banquet &amp; Sundowners</span><span class="dur">3hr</span></li>
+        <li><span class="time">21:00</span><span class="event">The Main Event — Music, Revelry, Surrender</span><span class="dur">until dawn</span></li>
+      </ul>
+    </div>
+    <div class="day-card">
+      <div class="day-header">Sunday</div>
+      <ul class="day-events">
+        <li><span class="time">10:00</span><span class="event">Recovery Brunch &amp; Bush Tea Ceremony</span><span class="dur">2hr</span></li>
+        <li><span class="time">12:00</span><span class="event">Barefoot Bush Ramble</span><span class="dur">2hr</span></li>
+        <li><span class="time">14:00</span><span class="event">Closing Circle &amp; Gratitude Share</span><span class="dur">1hr</span></li>
+        <li><span class="time">15:00</span><span class="event">Pack Down, Hugs &amp; Departures</span><span class="dur">—</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- BBQ IMAGE -->
+<section class="jam-hero">
+  <img src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=1200&q=80" alt="BBQ feast" loading="lazy">
+</section>
+
+<!-- VENUE PHOTOS -->
+<section id="venue">
+  <div class="sec-label">The <span>Compound</span></div>
+  <div class="sec-sub">Bush Retreat on the Hawkesbury — 9 acres of freedom</div>
+  <div class="venue-photo-row">
+    <div class="vp"><img src="https://a0.muscache.com/im/pictures/6a9a94e6-e79e-48d9-8a5d-241f5a0e06ac.jpg?im_w=720" alt="Aerial view"></div>
+    <div class="vp"><img src="https://a0.muscache.com/im/pictures/05e2fdfe-0ffb-4e12-93cf-8cfc6a9b3eb2.jpg?im_w=720" alt="Front deck"></div>
+    <div class="vp"><img src="https://a0.muscache.com/im/pictures/a99166b5-343f-49c0-9c40-7feb3d60c50b.jpg?im_w=720" alt="Living room"></div>
+    <div class="vp"><img src="https://a0.muscache.com/im/pictures/ac4ab110-3497-4ba3-9947-3bc299852185.jpg?im_w=720" alt="Kitchen and deck"></div>
+  </div>
+</section>
+
+<!-- VENUE CARD -->
+<section class="venue-card">
+  <h3>The Setup</h3>
+  <p class="desc">
+    Scenic bush retreat on 9 acres overlooking the Hawkesbury River. 5 bedrooms, 10-bed dormitory, separate studio. Commercial kitchen for feasts, 1000L drinks fridge, three massive deck areas, double BBQ, 65" screen with streaming, strong WiFi everywhere. 16+ guests. No neighbours. No curfew.
+  </p>
+  <div class="venue-tags">
+    <span>16+ Guests</span><span>5 Bedrooms</span><span>14 Beds</span><span>2.5 Baths</span>
+    <span>River Views</span><span>Commercial Kitchen</span><span>3 Massive Decks</span>
+    <span>1000L Drinks Fridge</span><span>65" TV + Streaming</span><span>Zero Neighbours</span>
+  </div>
+  <a href="https://www.airbnb.com.au/rooms/24567111?unique_share_id=a362390d-94ac-406d-a14a-e3859f9427fa&viralityEntryPoint=1&s=76" class="venue-btn" target="_blank">View Full Listing on Airbnb</a>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <p class="footer-text">Come with an open mind. Leave with an expanded one.<br>This is a celebration of consciousness. Journey inward. Connect outward.</p>
+</footer>
+
+</body>
+</html>

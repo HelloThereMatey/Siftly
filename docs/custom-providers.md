@@ -57,7 +57,7 @@ OpenCode Go ($5 first month → $10/month) provides curated coding models (GLM-5
 
 1. Install and configure routatic-proxy:
    ```bash
-   brew install routatic-proxy
+   brew tap routatic/tap && brew install routatic-proxy
    routatic-proxy init   # creates ~/.config/routatic-proxy/config.json
    # Edit config.json: add your OpenCode Go API key
    routatic-proxy serve
